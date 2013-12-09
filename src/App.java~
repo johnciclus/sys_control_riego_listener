@@ -18,69 +18,75 @@ public class App{
     private static int codcult;
     
 	public static void main(String[] args) throws Exception{ 
-        
-		// Instancia de la conexion COM.
-        com = new Com(paramCOM("COMUSB0"));
-        // Instancia de la conexion COM.
-        con = (Connection) paramDB().getConnection();
-        stmt = (Statement) con.createStatement();
-        
-        //Variables para lectura de la trama
-        ResultSet rs;
-        String sql = "";
-        char sc;
-        char[] trama = new char[22]; // Trama de 22 caracteres
-        boolean leer = false;		 // Lectura de trama
-        int tam = 22, ind = 0;
-        int cantSen = 0, cantVal = 0;
-        
-        codcult = 1;
-        
-        sql = "select registro_zigbee.maczigbee from registro_zigbee where codcult = "+codcult+" and tipo = 'sensor'";
-    	rs = stmt.executeQuery(sql);
-        
-    	System.out.println("Sensores activos:");
-    	while(rs.next()){
-    		System.out.println(rs.getString("maczigbee"));
-    		cantSen++;
-    	}
-    	
-    	sql = "select registro_zigbee.maczigbee from registro_zigbee where codcult = "+codcult+" and tipo = 'riego'";
-    	rs = stmt.executeQuery(sql);
-    	
-    	System.out.println("Valvulas de riego activas:");
-    	while(rs.next()){
-    		System.out.println(rs.getString("maczigbee"));
-    		cantVal++;
-    	}
-    	System.out.println();
-    	
-        genTraVal(1);
-        
-        //Lectura del puerto	        
-        while(true){
-        	sc = com.receiveSingleChar();
-        	if(!leer && sc == 0x7E){
-        		leer = true;
-        		System.out.println("Trama: ");
-            }
-        	if(leer){
-	        	if(ind<tam){
-	        		System.out.print(sc +" ");
-	        		trama[ind] = (char)(sc & 0x00FF);
-		            ind++;
+        serialPort = new SerialPort();
+        portsFree = serialPort.getFreeSerialPort();  
+                
+        if(portsFree.size() > 0){
+        	// Instancia de la conexion COM.
+	        com = new Com(paramCOM(portsFree.get(0)));
+	        // Instancia de la conexion COM.
+	        con = (Connection) paramDB().getConnection();
+	        stmt = (Statement) con.createStatement();
+	        
+	        //Variables para lectura de la trama
+	        ResultSet rs;
+	        String sql = "";
+	        char sc;
+	        char[] trama = new char[22]; // Trama de 22 caracteres
+	        boolean leer = false;		 // Lectura de trama
+	        int tam = 22, ind = 0;
+	        int cantSen = 0, cantVal = 0;
+	        
+	        codcult = 1;
+	        
+	        sql = "select registro_zigbee.maczigbee from registro_zigbee where codcult = "+codcult+" and tipo = 'sensor'";
+	    	rs = stmt.executeQuery(sql);
+	        
+	    	System.out.println("Sensores activos:");
+	    	while(rs.next()){
+	    		System.out.println(rs.getString("maczigbee"));
+	    		cantSen++;
+	    	}
+	    	
+	    	sql = "select registro_zigbee.maczigbee from registro_zigbee where codcult = "+codcult+" and tipo = 'riego'";
+	    	rs = stmt.executeQuery(sql);
+	    	
+	    	System.out.println("Valvulas de riego activas:");
+	    	while(rs.next()){
+	    		System.out.println(rs.getString("maczigbee"));
+	    		cantVal++;
+	    	}
+	    	System.out.println();
+	    	
+	        genTraVal(1);
+	        
+	        //Lectura del puerto	        
+	        while(true){
+	        	sc = com.receiveSingleChar();
+	        	if(!leer && sc == 0x7E){
+	        		leer = true;
+	        		System.out.println("Trama: ");
+	            }
+	        	if(leer){
+		        	if(ind<tam){
+		        		System.out.print(sc +" ");
+		        		trama[ind] = (char)(sc & 0x00FF);
+			            ind++;
+		        	}
+		        	else if(ind == tam){
+		        		anaTrama(trama);
+		        		leer = false;
+		        		ind = 0;
+		        		//Thread.sleep(100);
+		        	}
 	        	}
-	        	else if(ind == tam){
-	        		anaTrama(trama);
-	        		leer = false;
-	        		ind = 0;
-	        		//Thread.sleep(100);
-	        	}
-        	}
+	        }
+	        //con.close();
+	        //com.close();
+	    }
+        else{
+        	System.out.println("No se encontro puerto disponible");
         }
-        //con.close();
-        //com.close();
-	
     }
     public static Parameters paramCOM(String port) throws Exception{
     	// Definici�n de parametros de la conexion.
